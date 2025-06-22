@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Multa e Juros</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen py-8">
+    <div class="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-lg">
+        <!-- Cabeçalho -->
+        <div class="bg-green-100 border-2 border-green-500 rounded-lg p-6 mb-8">
+            <h1 class="text-4xl font-bold text-center text-green-800 mb-2">
+                📊 Calculadora de Multa e Juros
+            </h1>
+            <p class="text-center text-green-700 text-lg">
+                Sistema para cálculo de multa e juros em pagamentos em atraso
+            </p>
+            <p class="text-center text-green-600 text-sm mt-2">
+                Considera feriados nacionais e do Rio de Janeiro
+            </p>
+        </div>
+        
+        <div class="grid md:grid-cols-2 gap-8">
+            <!-- Formulário -->
+            <div class="space-y-6">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Dados do Pagamento</h2>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Valor Base (R$)
+                    </label>
+                    <input
+                        type="text"
+                        id="valorBase"
+                        placeholder="Ex: 1.000,50 ou 1000,50 ou 1000.50"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Data de Vencimento
+                    </label>
+                    <input
+                        type="date"
+                        id="dataVencimento"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Data do Pagamento
+                    </label>
+                    <input
+                        type="date"
+                        id="dataPagamento"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                </div>
+
+                <div class="flex space-x-4">
+                    <button
+                        onclick="calcularMultaJuros()"
+                        class="flex-1 bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 transition duration-200 font-semibold"
+                    >
+                        Calcular
+                    </button>
+                    <button
+                        onclick="limparFormulario()"
+                        class="flex-1 bg-gray-500 text-white py-3 px-4 rounded-md hover:bg-gray-600 transition duration-200"
+                    >
+                        Limpar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Resultado -->
+            <div>
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Resultado do Cálculo</h2>
+                
+                <div id="resultado" class="bg-gray-100 p-8 rounded-lg text-center text-gray-500">
+                    <p class="text-lg">Preencha os campos e clique em "Calcular"</p>
+                    <p class="text-sm mt-2">para ver o resultado detalhado</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Regras -->
+        <div class="mt-8 bg-green-50 p-6 rounded-lg border border-green-200">
+            <h3 class="text-lg font-semibold text-green-800 mb-3">📋 Regras de Cálculo</h3>
+            <div class="grid md:grid-cols-2 gap-4 text-sm text-green-700">
+                <div>
+                    <p><strong>Multa:</strong> 2% sobre o valor base</p>
+                    <p><strong>Juros:</strong> 1% por dia de atraso</p>
+                </div>
+                <div>
+                    <p><strong>Exceção:</strong> Sem multa/juros se pagamento no 1º dia útil após vencimento em feriado/fim de semana</p>
+                    <p><strong>Feriados:</strong> Nacionais + Rio de Janeiro</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Feriados nacionais e do RJ
+        const feriados2024 = [
+            '01-01', '02-12', '02-13', '03-29', '04-21', '04-23', '05-01', 
+            '09-07', '10-12', '10-15', '11-02', '11-15', '11-20', '12-25'
+        ];
+
+        const feriados2025 = [
+            '01-01', '03-03', '03-04', '04-18', '04-21', '04-23', '05-01', 
+            '09-07', '10-12', '10-15', '11-02', '11-15', '11-20', '12-25'
+        ];
+
+        function ehFeriado(data) {
+            const ano = data.getFullYear();
+            const mesEDia = String(data.getMonth() + 1).padStart(2, '0') + '-' + String(data.getDate()).padStart(2, '0');
+            
+            if (ano === 2024) return feriados2024.includes(mesEDia);
+            if (ano === 2025) return feriados2025.includes(mesEDia);
+            
+            const feriadosFixos = ['01-01', '04-21', '04-23', '05-01', '09-07', '10-12', '10-15', '11-02', '11-15', '11-20', '12-25'];
+            return feriadosFixos.includes(mesEDia);
+        }
+
+        function ehFimDeSemana(data) {
+            const diaSemana = data.getDay();
+            return diaSemana === 0 || diaSemana === 6;
+        }
+
+        function ehDiaUtil(data) {
+            return !ehFimDeSemana(data) && !ehFeriado(data);
+        }
+
+        function proximoDiaUtil(data) {
+            let proximaData = new Date(data);
+            proximaData.setDate(proximaData.getDate() + 1);
+            
+            while (!ehDiaUtil(proximaData)) {
+                proximaData.setDate(proximaData.getDate() + 1);
+            }
+            
+            return proximaData;
+        }
+
+        function formatarMoeda(valor) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(valor);
+        }
+
+        function calcularMultaJuros() {
+            const valorBase = document.getElementById('valorBase').value;
+            const dataVencimento = document.getElementById('dataVencimento').value;
+            const dataPagamento = document.getElementById('dataPagamento').value;
+
+            if (!valorBase || !dataVencimento || !dataPagamento) {
+                alert('Por favor, preencha todos os campos');
+                return;
+            }
+
+            // Processar valor brasileiro
+            let valorLimpo = valorBase.toString().trim();
+            
+            if (valorLimpo.includes(',')) {
+                valorLimpo = valorLimpo.replace(/\./g, '').replace(',', '.');
+            } else if (valorLimpo.includes('.')) {
+                const pontos = (valorLimpo.match(/\./g) || []).length;
+                const ultimoPonto = valorLimpo.lastIndexOf('.');
+                const digitosAposUltimoPonto = valorLimpo.length - ultimoPonto - 1;
+                
+                if (pontos > 1 || digitosAposUltimoPonto !== 2) {
+                    valorLimpo = valorLimpo.replace(/\./g, '');
+                }
+            }
+            
+            const valor = parseFloat(valorLimpo);
+            
+            // Processar datas corretamente
+            const [anoVenc, mesVenc, diaVenc] = dataVencimento.split('-');
+            const vencimento = new Date(parseInt(anoVenc), parseInt(mesVenc) - 1, parseInt(diaVenc));
+            
+            const [anoPag, mesPag, diaPag] = dataPagamento.split('-');
+            const pagamento = new Date(parseInt(anoPag), parseInt(mesPag) - 1, parseInt(diaPag));
+
+            let resultado = {};
+
+            // Pagamento no prazo
+            if (pagamento <= vencimento) {
+                resultado = {
+                    valorBase: valor,
+                    dataVencimento: vencimento.toLocaleDateString('pt-BR'),
+                    dataPagamento: pagamento.toLocaleDateString('pt-BR'),
+                    diasAtraso: 0,
+                    valorMulta: 0,
+                    valorJuros: 0,
+                    valorTotal: valor,
+                    observacao: 'Pagamento realizado dentro do prazo.'
+                };
+            } else {
+                // Verificar regra especial para feriados/fins de semana
+                const vencimentoEhDiaUtil = ehDiaUtil(vencimento);
+                
+                if (!vencimentoEhDiaUtil) {
+                    const proximoDiaUtilVencimento = proximoDiaUtil(vencimento);
+                    
+                    // Se pagamento foi no primeiro dia útil após vencimento em feriado/fim de semana
+                    if (pagamento.getDate() === proximoDiaUtilVencimento.getDate() &&
+                        pagamento.getMonth() === proximoDiaUtilVencimento.getMonth() &&
+                        pagamento.getFullYear() === proximoDiaUtilVencimento.getFullYear()) {
+                        
+                        resultado = {
+                            valorBase: valor,
+                            dataVencimento: vencimento.toLocaleDateString('pt-BR'),
+                            dataPagamento: pagamento.toLocaleDateString('pt-BR'),
+                            diasAtraso: 0,
+                            valorMulta: 0,
+                            valorJuros: 0,
+                            valorTotal: valor,
+                            observacao: 'Multa e juros não cobrados - pagamento no primeiro dia útil após vencimento em feriado/fim de semana.',
+                            vencimentoFoiFeriado: true,
+                            proximoDiaUtilVencimento: proximoDiaUtilVencimento.toLocaleDateString('pt-BR')
+                        };
+                    } else {
+                        // Cálculo normal com multa e juros
+                        const diasAtraso = Math.ceil((pagamento - vencimento) / (1000 * 60 * 60 * 24));
+                        const valorMulta = valor * 0.02;
+                        const valorJuros = valor * 0.01 * diasAtraso;
+                        const valorTotal = valor + valorMulta + valorJuros;
+
+                        resultado = {
+                            valorBase: valor,
+                            dataVencimento: vencimento.toLocaleDateString('pt-BR'),
+                            dataPagamento: pagamento.toLocaleDateString('pt-BR'),
+                            diasAtraso,
+                            valorMulta,
+                            valorJuros,
+                            valorTotal,
+                            observacao: 'Pagamento com atraso - multa e juros aplicados.',
+                            vencimentoFoiFeriado: !vencimentoEhDiaUtil
+                        };
+                    }
+                } else {
+                    // Cálculo normal com multa e juros
+                    const diasAtraso = Math.ceil((pagamento - vencimento) / (1000 * 60 * 60 * 24));
+                    const valorMulta = valor * 0.02;
+                    const valorJuros = valor * 0.01 * diasAtraso;
+                    const valorTotal = valor + valorMulta + valorJuros;
+
+                    resultado = {
+                        valorBase: valor,
+                        dataVencimento: vencimento.toLocaleDateString('pt-BR'),
+                        dataPagamento: pagamento.toLocaleDateString('pt-BR'),
+                        diasAtraso,
+                        valorMulta,
+                        valorJuros,
+                        valorTotal,
+                        observacao: 'Pagamento com atraso - multa e juros aplicados.',
+                        vencimentoFoiFeriado: false
+                    };
+                }
+            }
+
+            exibirResultado(resultado);
+        }
+
+        function exibirResultado(resultado) {
+            const resultadoDiv = document.getElementById('resultado');
+            
+            let html = `
+                <div class="bg-gray-50 p-6 rounded-lg space-y-3 text-left">
+                    <div class="flex justify-between">
+                        <span class="font-medium">Valor Base:</span>
+                        <span class="font-semibold">${formatarMoeda(resultado.valorBase)}</span>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <span class="font-medium">Data de Vencimento:</span>
+                        <span>${resultado.dataVencimento}</span>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <span class="font-medium">Data do Pagamento:</span>
+                        <span>${resultado.dataPagamento}</span>
+                    </div>
+            `;
+
+            if (resultado.vencimentoFoiFeriado && resultado.proximoDiaUtilVencimento) {
+                html += `
+                    <div class="bg-yellow-100 p-3 rounded-md">
+                        <p class="text-sm text-yellow-800">
+                            ⚠️ Vencimento em feriado/fim de semana. Próximo dia útil: ${resultado.proximoDiaUtilVencimento}
+                        </p>
+                    </div>
+                `;
+            }
+
+            html += `
+                    <div class="flex justify-between">
+                        <span class="font-medium">Dias de Atraso:</span>
+                        <span class="${resultado.diasAtraso > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}">
+                            ${resultado.diasAtraso} dias
+                        </span>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <span class="font-medium">Multa (2%):</span>
+                        <span class="${resultado.valorMulta > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}">
+                            ${formatarMoeda(resultado.valorMulta)}
+                        </span>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <span class="font-medium">Juros (1% ao dia):</span>
+                        <span class="${resultado.valorJuros > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}">
+                            ${formatarMoeda(resultado.valorJuros)}
+                        </span>
+                    </div>
+                    
+                    <hr class="my-4 border-gray-300" />
+                    
+                    <div class="flex justify-between text-xl font-bold">
+                        <span>Valor Total a Pagar:</span>
+                        <span class="${resultado.valorTotal === resultado.valorBase ? 'text-green-600' : 'text-blue-600'}">
+                            ${formatarMoeda(resultado.valorTotal)}
+                        </span>
+                    </div>
+
+                    <div class="bg-blue-100 p-4 rounded-md mt-4">
+                        <p class="text-sm text-blue-800 font-medium">
+                            ℹ️ ${resultado.observacao}
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            resultadoDiv.innerHTML = html;
+        }
+
+        function limparFormulario() {
+            document.getElementById('valorBase').value = '';
+            document.getElementById('dataVencimento').value = '';
+            document.getElementById('dataPagamento').value = '';
+            document.getElementById('resultado').innerHTML = `
+                <div class="bg-gray-100 p-8 rounded-lg text-center text-gray-500">
+                    <p class="text-lg">Preencha os campos e clique em "Calcular"</p>
+                    <p class="text-sm mt-2">para ver o resultado detalhado</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
