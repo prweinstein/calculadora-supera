@@ -231,8 +231,9 @@
                             proximoDiaUtilVencimento: proximoDiaUtilVencimento.toLocaleDateString('pt-BR')
                         };
                     } else {
-                        // Cálculo normal com multa e juros
-                        const diasAtraso = Math.ceil((pagamento - vencimento) / (1000 * 60 * 60 * 24));
+                        // Para vencimento em feriado/fim de semana, calcular atraso a partir do 1º dia útil
+                        const proximoDiaUtilVencimento = proximoDiaUtil(vencimento);
+                        const diasAtraso = Math.ceil((pagamento - proximoDiaUtilVencimento) / (1000 * 60 * 60 * 24));
                         const valorMulta = valor * 0.02;
                         const valorJuros = valor * 0.01 * diasAtraso;
                         const valorTotal = valor + valorMulta + valorJuros;
@@ -245,8 +246,9 @@
                             valorMulta,
                             valorJuros,
                             valorTotal,
-                            observacao: 'Pagamento com atraso - multa e juros aplicados.',
-                            vencimentoFoiFeriado: !vencimentoEhDiaUtil
+                            observacao: `Pagamento com atraso - multa e juros aplicados. Vencimento prorrogado para ${proximoDiaUtilVencimento.toLocaleDateString('pt-BR')} (1º dia útil).`,
+                            vencimentoFoiFeriado: true,
+                            proximoDiaUtilVencimento: proximoDiaUtilVencimento.toLocaleDateString('pt-BR')
                         };
                     }
                 } else {
