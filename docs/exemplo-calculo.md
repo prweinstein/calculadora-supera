@@ -1,150 +1,636 @@
-# 📊 Exemplo Detalhado de Cálculo
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Multa e Juros - Rio de Janeiro</title>
+    <meta name="description" content="Sistema para cálculo de multa e juros em pagamentos em atraso. Específico para o Estado do Rio de Janeiro com feriados atualizados.">
+    <meta name="keywords" content="calculadora, multa, juros, atraso, pagamento, Rio de Janeiro, CDC, feriados">
+    <meta name="author" content="Paulo Weinstein">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Calculadora de Multa e Juros - RJ">
+    <meta property="og:description" content="Calcule multa e juros de pagamentos em atraso com feriados do RJ atualizados automaticamente.">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="Calculadora de Multa e Juros - RJ">
+    <meta property="twitter:description" content="Calcule multa e juros de pagamentos em atraso com feriados do RJ atualizados automaticamente.">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen py-8">
+    <div class="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-lg">
+        <!-- Cabeçalho -->
+        <div class="bg-green-100 border-2 border-green-500 rounded-lg p-6 mb-8">
+            <h1 class="text-4xl font-bold text-center text-green-800 mb-2">
+                📊 Calculadora de Multa e Juros
+            </h1>
+            <p class="text-center text-green-700 text-lg">
+                Sistema para cálculo de multa e juros em pagamentos em atraso
+            </p>
+            <p class="text-center text-green-600 text-sm mt-2">
+                🏖️ Específica para o Estado do Rio de Janeiro (feriados nacionais + estaduais RJ) • <span class="text-green-500 text-xs opacity-75">By PRWeinstein</span>
+            </p>
+            
+            <!-- Loading de feriados (oculto em produção) -->
+            <div id="loadingFeriados" class="hidden bg-blue-100 border border-blue-300 rounded-lg p-3 mt-4 text-center">
+                <div class="flex items-center justify-center space-x-3">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span class="text-blue-700 font-medium">🌐 Processando cálculo...</span>
+                </div>
+                <p class="text-blue-600 text-xs mt-1">Aguarde alguns segundos</p>
+            </div>
+            
+            <!-- Debug removido da produção -->
+        </div>
+        
+        <div class="grid md:grid-cols-2 gap-8">
+            <!-- Formulário -->
+            <div class="space-y-6">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Dados do Pagamento</h2>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Valor Base (R$)
+                    </label>
+                    <input
+                        type="text"
+                        id="valorBase"
+                        placeholder="Ex: 1.000,50 ou 1000,50 ou 1000.50"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                </div>
 
-Este documento apresenta um exemplo prático de como a calculadora funciona.
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Data de Vencimento
+                    </label>
+                    <input
+                        type="date"
+                        id="dataVencimento"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                </div>
 
-## 🧮 **Cenário de Exemplo**
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Data do Pagamento
+                    </label>
+                    <input
+                        type="date"
+                        id="dataPagamento"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                </div>
 
-### **Dados de Entrada:**
+                <!-- Configurações de Cálculo -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h3 class="text-sm font-semibold text-blue-800 mb-3">⚙️ Configurações de Cálculo</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Multa (%) - Máximo 2% (Código Civil)
+                            </label>
+                            <input
+                                type="number"
+                                id="percentualMulta"
+                                value="2"
+                                min="0"
+                                max="2"
+                                step="0.01"
+                                placeholder="Ex: 2"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <p class="text-xs text-blue-600 mt-1">⚖️ Limite legal: 2% (Art. 52 do CDC)</p>
+                        </div>
 
-* **Valor Base:** R$ 200,00
-* **Data de Vencimento:** 01/07/2025 (terça-feira)
-* **Data de Pagamento:** 13/07/2025 (domingo)
-* **Configurações:** Multa 2%, Juros 1% ao mês
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Juros (%) - Máximo 1% ao mês (CDC)
+                            </label>
+                            <input
+                                type="number"
+                                id="percentualJuros"
+                                value="1"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                placeholder="Ex: 1"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <p class="text-xs text-blue-600 mt-1">⚖️ Limite legal: 1% ao mês (12% ao ano)</p>
+                        </div>
 
-***
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Período dos Juros
+                            </label>
+                            <select
+                                id="periodoJuros"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="dia">Por dia</option>
+                                <option value="mes" selected>Por mês</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
 
-## ⚙️ **Processo de Cálculo**
+                <div class="flex space-x-4">
+                    <button
+                        onclick="calcularComLoading()"
+                        class="flex-1 bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 transition duration-200 font-semibold"
+                    >
+                        Calcular
+                    </button>
+                    <button
+                        onclick="limparFormulario()"
+                        class="flex-1 bg-gray-500 text-white py-3 px-4 rounded-md hover:bg-gray-600 transition duration-200"
+                    >
+                        Limpar
+                    </button>
+                </div>
+            </div>
 
-### **1. Verificação do Vencimento**
+            <!-- Resultado -->
+            <div>
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Resultado do Cálculo</h2>
+                
+                <div id="resultado" class="bg-gray-100 p-8 rounded-lg text-center text-gray-500">
+                    <p class="text-lg">Preencha os campos e clique em "Calcular"</p>
+                    <p class="text-sm mt-2">para ver o resultado detalhado</p>
+                </div>
+            </div>
+        </div>
 
-* **01/07/2025** é uma **terça-feira**
-* ✅ **É dia útil** (não é fim de semana nem feriado)
-* **Vencimento efetivo:** 01/07/2025 (sem prorrogação)
+        <!-- Regras -->
+        <div class="mt-8 bg-green-50 p-6 rounded-lg border border-green-200">
+            <h3 class="text-lg font-semibold text-green-800 mb-3">📋 Regras de Cálculo</h3>
+            <div class="grid md:grid-cols-2 gap-4 text-sm text-green-700">
+                <div>
+                    <p><strong>Multa:</strong> Percentual configurável (padrão 2%)</p>
+                    <p><strong>Juros:</strong> Percentual configurável por dia ou mês (padrão 1% ao mês)</p>
+                    <p><strong>Cálculo por mês:</strong> Considera 30 dias por mês</p>
+                </div>
+                <div>
+                    <p><strong>Exceção:</strong> Sem multa/juros se pagamento no 1º dia útil após vencimento em feriado/fim de semana</p>
+                    <p><strong>Feriados:</strong> Nacionais + Estaduais do Rio de Janeiro</p>
+                    <p><strong>API:</strong> Feriados atualizados automaticamente via Brasil API</p>
+                    <p><strong>Limites:</strong> Multa máx. 2%, Juros máx. 1% ao mês (CDC)</p>
+                </div>
+            </div>
+        </div>
 
-### **2. Ajuste da Data de Pagamento**
+        <!-- Footer -->
+        <div class="mt-8 pt-6 border-t border-gray-200 text-center text-sm text-gray-600">
+            <p>
+                🔗 <a href="https://github.com/prweinstein/calculadora-supera" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800">
+                    Ver código no GitHub
+                </a> • 
+                📧 <a href="mailto:prweinstein@gmail.com" class="text-blue-600 hover:text-blue-800">
+                    Reportar problema
+                </a>
+            </p>
+            <p class="mt-2 text-xs text-gray-500">
+                ⚖️ Esta ferramenta é para fins informativos. Consulte sempre um advogado para casos específicos.
+            </p>
+        </div>
+    </div>
 
-* **13/07/2025** é um **domingo**
-* ❌ **Não é dia útil** (fim de semana)
-* **Próximo dia útil:** 14/07/2025 (segunda-feira)
-* **Pagamento efetivo:** 14/07/2025
+    <script>
+        // Cache de feriados para evitar múltiplas chamadas da API
+        let cacheFeriados = {};
 
-### **3. Cálculo dos Dias de Atraso**
-Atraso = Data Pagamento Efetiva - Data Vencimento Efetiva Atraso = 14/07/2025 - 01/07/2025 Atraso = 13 dias
+        // Feriados fixos RJ (fallback se API falhar)
+        // NOTA: Apenas feriados oficiais (03-03 segunda de Carnaval NÃO é feriado)
+        const feriadosFixosRJ = [
+            '01-01', // Confraternização Universal
+            '01-20', // São Sebastião (Padroeiro do RJ)
+            '04-21', // Tiradentes
+            '04-23', // São Jorge (RJ)
+            '05-01', // Dia do Trabalhador
+            '09-07', // Independência do Brasil
+            '10-12', // Nossa Senhora Aparecida
+            '10-15', // Dia do Professor (RJ)
+            '11-02', // Finados
+            '11-15', // Proclamação da República
+            '11-20', // Zumbi dos Palmares (RJ)
+            '12-25'  // Natal
+            // Carnaval varia por ano - será adicionado pela API
+        ];
 
+        // Buscar feriados da API Brasil API - VERSÃO SIMPLIFICADA
+        async function buscarFeriadosAPI(ano) {
+            if (cacheFeriados[ano]) {
+                return cacheFeriados[ano];
+            }
 
-### **4. Cálculo da Multa**
-Multa = Valor Base × Percentual de Multa Multa = R
-200
-,
-00
-×
-2
-M
-u
-l
-t
-a
-=
-R
-200,00×2Multa=R 200,00 × 0,02 Multa = R$ 4,00
+            // console.log(`Consultando feriados para ${ano}`);
 
+            try {
+                const response = await fetch(`https://brasilapi.com.br/api/feriados/v1/${ano}`);
+                
+                if (response.ok) {
+                    const feriados = await response.json();
+                    const feriadosFormatados = feriados.map(f => f.date.substring(5));
+                    
+                    // Adicionar feriados específicos do RJ
+                    const feriadosCompletos = [...new Set([...feriadosFormatados, '01-20', '04-23', '10-15', '11-20'])];
+                    
+                    // console.log(`${feriadosCompletos.length} feriados carregados para ${ano}`);
+                    
+                    cacheFeriados[ano] = feriadosCompletos;
+                    return feriadosCompletos;
+                }
+            } catch (error) {
+                // console.log(`Erro na API: ${error.message}`);
+            }
 
-### **5. Cálculo dos Juros (Mensal)**
-Meses de atraso = Dias de atraso ÷ 30 Meses de atraso = 13 ÷ 30 = 0,4333 meses
+            // Fallback
+            // console.log(`Usando feriados locais para ${ano}`);
+            cacheFeriados[ano] = feriadosFixosRJ;
+            return feriadosFixosRJ;
+        }
 
-Juros = Valor Base × Percentual de Juros × Meses de atraso Juros = R
-200
-,
-00
-×
-1
-J
-u
-r
-o
-s
-=
-R
-200,00×1Juros=R 200,00 × 0,01 × 0,4333 Juros = R$ 0,87
+        // Função simplificada - sem debug redundante
+        async function ehFeriado(data) {
+            const ano = data.getFullYear();
+            const mesEDia = String(data.getMonth() + 1).padStart(2, '0') + '-' + String(data.getDate()).padStart(2, '0');
+            
+            const feriadosDoAno = await buscarFeriadosAPI(ano);
+            return feriadosDoAno.includes(mesEDia);
+        }
 
+        function ehFimDeSemana(data) {
+            const diaSemana = data.getDay();
+            return diaSemana === 0 || diaSemana === 6;
+        }
 
-### **6. Valor Total**
-Total = Valor Base + Multa + Juros Total = R
-200
-,
-00
-+
-R
-200,00+R 4,00 + R
-0
-,
-87
-T
-o
-t
-a
-l
-=
-R
-0,87Total=R 204,87
+        async function ehDiaUtil(data) {
+            return !ehFimDeSemana(data) && !(await ehFeriado(data));
+        }
 
+        async function proximoDiaUtil(data) {
+            let proximaData = new Date(data);
+            proximaData.setDate(proximaData.getDate() + 1);
+            
+            while (!(await ehDiaUtil(proximaData))) {
+                proximaData.setDate(proximaData.getDate() + 1);
+            }
+            
+            return proximaData;
+        }
 
-***
+        // Função para ajustar data de pagamento para próximo dia útil se necessário
+        async function ajustarDataPagamentoParaDiaUtil(data) {
+            if (await ehDiaUtil(data)) {
+                return data; // Se já é dia útil, mantém a data
+            } else {
+                return await proximoDiaUtil(data); // Se não é dia útil, move para próximo dia útil
+            }
+        }
 
-## 📋 **Resultado Final**
+        function formatarMoeda(valor) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(valor);
+        }
 
-| Item                  | Valor         |
-| --------------------- | ------------- |
-| **Valor Base**        | R$ 200,00     |
-| **Multa (2%)**        | R$ 4,00       |
-| **Juros (1% ao mês)** | R$ 0,87       |
-| **Total a Pagar**     | **R$ 204,87** |
+        async function calcularMultaJuros() {
+            const valorBase = document.getElementById('valorBase').value;
+            const dataVencimento = document.getElementById('dataVencimento').value;
+            const dataPagamento = document.getElementById('dataPagamento').value;
+            const percentualMulta = parseFloat(document.getElementById('percentualMulta').value) || 2;
+            const percentualJuros = parseFloat(document.getElementById('percentualJuros').value) || 1;
+            const periodoJuros = document.getElementById('periodoJuros').value;
 
-### **Informações Adicionais:**
+            // console.log(`Calculando: ${dataVencimento} -> ${dataPagamento}`);
 
-* **Dias de atraso:** 13 dias úteis
-* **Data efetiva do pagamento:** 14/07/2025 (próximo dia útil)
-* **Observação:** Pagamento com atraso - multa e juros aplicados
+            // Validações robustas
+            if (!valorBase || !dataVencimento || !dataPagamento) {
+                alert('❌ Por favor, preencha todos os campos obrigatórios');
+                return;
+            }
 
-***
+            // Validar limites legais
+            if (percentualMulta > 2) {
+                alert('⚖️ ATENÇÃO: Multa acima de 2% pode ser considerada abusiva (Art. 52 CDC)');
+                return;
+            }
 
-## 🎯 **Cenários Especiais**
+            if (percentualJuros > 1 && periodoJuros === 'mes') {
+                alert('⚖️ ATENÇÃO: Juros acima de 1% ao mês (12% ao ano) podem ser considerados abusivos (CDC)');
+                return;
+            }
 
-### **Vencimento em Feriado**
+            // Validação corrigida para juros diários (12% ao ano = 0,033% ao dia)
+            if (percentualJuros > 0.033 && periodoJuros === 'dia') {
+                if (!confirm('⚖️ ATENÇÃO: Juros diários acima de 0,033% (equivale a 12% ao ano) podem ser abusivos. Deseja continuar?')) {
+                    return;
+                }
+            }
 
-Se o vencimento fosse **04/03/2025** (Carnaval - terça-feira):
+            // Validar datas
+            const hoje = new Date();
+            const vencimentoTemp = new Date(dataVencimento);
+            const pagamentoTemp = new Date(dataPagamento);
 
-* **Vencimento prorrogado** para 05/03/2025 (quarta-feira)
-* **Cálculo de atraso** feito a partir de 05/03/2025
+            if (vencimentoTemp > hoje) {
+                if (!confirm('⚠️ A data de vencimento é futura. Deseja continuar?')) {
+                    return;
+                }
+            }
 
-### **Pagamento no 1º Dia Útil**
+            if (pagamentoTemp > hoje) {
+                if (!confirm('⚠️ A data de pagamento é futura. Deseja continuar?')) {
+                    return;
+                }
+            }
 
-Se o pagamento fosse feito em **05/03/2025** (primeiro dia útil após Carnaval):
+            if (pagamentoTemp < vencimentoTemp) {
+                const diasAntecipados = Math.ceil((vencimentoTemp - pagamentoTemp) / (1000 * 60 * 60 * 24));
+                if (diasAntecipados > 30) {
+                    if (!confirm(`⚠️ Pagamento ${diasAntecipados} dias antes do vencimento. Deseja continuar?`)) {
+                        return;
+                    }
+                }
+            }
 
-* **Resultado:** R$ 200,00 (sem multa nem juros)
-* **Observação:** "Multa e juros não cobrados - pagamento no primeiro dia útil após vencimento em feriado"
+            const diffAnos = Math.abs(pagamentoTemp.getFullYear() - vencimentoTemp.getFullYear());
+            if (diffAnos > 10) {
+                alert('❌ Período muito longo (mais de 10 anos). Verifique as datas informadas.');
+                return;
+            }
 
-***
+            // Processar valor brasileiro
+            let valorLimpo = valorBase.toString().trim();
+            
+            if (valorLimpo.includes(',')) {
+                valorLimpo = valorLimpo.replace(/\./g, '').replace(',', '.');
+            } else if (valorLimpo.includes('.')) {
+                const pontos = (valorLimpo.match(/\./g) || []).length;
+                const ultimoPonto = valorLimpo.lastIndexOf('.');
+                const digitosAposUltimoPonto = valorLimpo.length - ultimoPonto - 1;
+                
+                if (pontos > 1 || digitosAposUltimoPonto !== 2) {
+                    valorLimpo = valorLimpo.replace(/\./g, '');
+                }
+            }
+            
+            const valor = parseFloat(valorLimpo);
+            
+            // Processar datas corretamente
+            const [anoVenc, mesVenc, diaVenc] = dataVencimento.split('-');
+            const vencimento = new Date(parseInt(anoVenc), parseInt(mesVenc) - 1, parseInt(diaVenc));
+            
+            const [anoPag, mesPag, diaPag] = dataPagamento.split('-');
+            const pagamentoOriginal = new Date(parseInt(anoPag), parseInt(mesPag) - 1, parseInt(diaPag));
+            
+            // REGRA JURÍDICA: Pagamento em dia não útil é considerado efetivo no próximo dia útil
+            const pagamento = await ajustarDataPagamentoParaDiaUtil(pagamentoOriginal);
 
-## 📖 **Fórmulas Utilizadas**
+            let resultado = {};
 
-### **Para Juros Mensais:**
-Juros = Valor Base × (% Juros ÷ 100) × (Dias de Atraso ÷ 30)
+            // LÓGICA SIMPLIFICADA: Determinar vencimento efetivo uma única vez
+            const vencimentoEhDiaUtil = await ehDiaUtil(vencimento);
+            const vencimentoEfetivo = vencimentoEhDiaUtil ? vencimento : await proximoDiaUtil(vencimento);
+            
+            // Log apenas se necessário
+            if (!vencimentoEhDiaUtil) {
+                console.log(`Vencimento prorrogado: ${vencimento.toLocaleDateString('pt-BR')} → ${vencimentoEfetivo.toLocaleDateString('pt-BR')}`);
+            }
 
+            // Calcular atraso sempre baseado no vencimento efetivo
+            const diasAtraso = Math.max(0, Math.ceil((pagamento - vencimentoEfetivo) / (1000 * 60 * 60 * 24)));
+            
+            // Se não há atraso (pagamento no prazo ou no 1º dia útil)
+            if (diasAtraso === 0) {
+                const observacao = vencimentoEhDiaUtil 
+                    ? 'Pagamento realizado dentro do prazo.'
+                    : 'Multa e juros não cobrados - pagamento no primeiro dia útil após vencimento em feriado/fim de semana.';
+                
+                resultado = {
+                    valorBase: valor,
+                    dataVencimento: vencimento.toLocaleDateString('pt-BR'),
+                    dataPagamento: pagamentoOriginal.toLocaleDateString('pt-BR'),
+                    dataPagamentoEfetiva: pagamento !== pagamentoOriginal ? pagamento.toLocaleDateString('pt-BR') : null,
+                    diasAtraso: 0,
+                    valorMulta: 0,
+                    valorJuros: 0,
+                    valorTotal: valor,
+                    observacao,
+                    vencimentoFoiFeriado: !vencimentoEhDiaUtil,
+                    proximoDiaUtilVencimento: !vencimentoEhDiaUtil ? vencimentoEfetivo.toLocaleDateString('pt-BR') : null
+                };
+            } else {
+                // Há atraso: calcular multa e juros
+                const valorMulta = valor * (percentualMulta / 100);
+                
+                let valorJuros;
+                if (periodoJuros === 'mes') {
+                    const mesesAtraso = diasAtraso / 30;
+                    valorJuros = valor * (percentualJuros / 100) * mesesAtraso;
+                } else {
+                    valorJuros = valor * (percentualJuros / 100) * diasAtraso;
+                }
+                
+                const valorTotal = valor + valorMulta + valorJuros;
+                const observacao = !vencimentoEhDiaUtil 
+                    ? `Pagamento com atraso - multa e juros aplicados. Vencimento prorrogado para ${vencimentoEfetivo.toLocaleDateString('pt-BR')} (1º dia útil).`
+                    : 'Pagamento com atraso - multa e juros aplicados.';
 
-### **Para Juros Diários:**
-Juros = Valor Base × (% Juros ÷ 100) × Dias de Atraso
+                resultado = {
+                    valorBase: valor,
+                    dataVencimento: vencimento.toLocaleDateString('pt-BR'),
+                    dataPagamento: pagamentoOriginal.toLocaleDateString('pt-BR'),
+                    dataPagamentoEfetiva: pagamento !== pagamentoOriginal ? pagamento.toLocaleDateString('pt-BR') : null,
+                    diasAtraso,
+                    valorMulta,
+                    valorJuros,
+                    valorTotal,
+                    observacao,
+                    vencimentoFoiFeriado: !vencimentoEhDiaUtil,
+                    proximoDiaUtilVencimento: !vencimentoEhDiaUtil ? vencimentoEfetivo.toLocaleDateString('pt-BR') : null,
+                    percentualMulta,
+                    percentualJuros,
+                    periodoJuros
+                };
+            }
 
+            esconderLoading();
+            exibirResultado(resultado);
+        }
 
-### **Multa:**
-Multa = Valor Base × (% Multa ÷ 100)
+        // Função auxiliar para mostrar loading
+        function mostrarLoading() {
+            // Mostrar loading próximo ao cabeçalho
+            const loadingDiv = document.getElementById('loadingFeriados');
+            loadingDiv.classList.remove('hidden');
+            
+            // Mostrar loading simples no resultado
+            const resultadoDiv = document.getElementById('resultado');
+            resultadoDiv.innerHTML = `
+                <div class="bg-gray-100 p-8 rounded-lg text-center text-gray-500">
+                    <p class="text-lg">⏳ Processando cálculo...</p>
+                    <p class="text-sm mt-2">Aguarde alguns segundos</p>
+                </div>
+            `;
+        }
 
+        // Função para esconder loading
+        function esconderLoading() {
+            const loadingDiv = document.getElementById('loadingFeriados');
+            loadingDiv.classList.add('hidden');
+        }
 
-***
+        // Debug removido da produção
 
-## ⚖️ **Fundamentos Legais**
+        // Variável para controle de cálculo em andamento
+        let calculandoEmAndamento = false;
+        
+        // Atualizar botão de calcular para mostrar loading
+        async function calcularComLoading() {
+            // Evitar múltiplos cálculos simultâneos
+            if (calculandoEmAndamento) {
+                return;
+            }
+            
+            calculandoEmAndamento = true;
+            
+            // Limpar cache antes de novo cálculo para evitar loops
+            cacheFeriados = {};
+            
+            mostrarLoading();
+            try {
+                await calcularMultaJuros();
+            } catch (error) {
+                console.error('Erro no cálculo:', error);
+                document.getElementById('resultado').innerHTML = `
+                    <div class="bg-red-100 p-8 rounded-lg text-center text-red-600">
+                        <p class="text-lg">❌ Erro no cálculo</p>
+                        <p class="text-sm mt-2">${error.message}</p>
+                        <p class="text-xs mt-2">Tente novamente ou verifique os dados informados</p>
+                    </div>
+                `;
+            } finally {
+                esconderLoading();
+                calculandoEmAndamento = false;
+            }
+        }
 
-* **Multa máxima:** 2% (Art. 52 do CDC)
-* **Juros máximos:** 1% ao mês (12% ao ano - CDC)
-* **Prorrogação:** Vencimento em feriado/fim de semana é prorrogado para próximo dia útil
-* **Tolerância:** Pagamento no 1º dia útil após vencimento em feriado não gera multa/juros
+        function exibirResultado(resultado) {
+            const resultadoDiv = document.getElementById('resultado');
+            
+            let html = `
+                <div class="bg-gray-50 p-6 rounded-lg space-y-3 text-left">
+                    <div class="flex justify-between">
+                        <span class="font-medium">Valor Base:</span>
+                        <span class="font-semibold">${formatarMoeda(resultado.valorBase)}</span>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <span class="font-medium">Data de Vencimento:</span>
+                        <span>${resultado.dataVencimento}</span>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <span class="font-medium">Data do Pagamento:</span>
+                        <span>${resultado.dataPagamento}</span>
+                    </div>
+                    
+                    ${resultado.dataPagamentoEfetiva && resultado.dataPagamentoEfetiva !== resultado.dataPagamento ? `
+                    <div class="bg-orange-100 p-3 rounded-md">
+                        <p class="text-sm text-orange-800">
+                            📅 Pagamento efetuado em dia não útil. Data efetiva: ${resultado.dataPagamentoEfetiva}
+                        </p>
+                    </div>
+                    ` : ''}
+            `;
+
+            if (resultado.vencimentoFoiFeriado && resultado.proximoDiaUtilVencimento) {
+                html += `
+                    <div class="bg-yellow-100 p-3 rounded-md">
+                        <p class="text-sm text-yellow-800">
+                            ⚠️ Vencimento em feriado/fim de semana. Próximo dia útil: ${resultado.proximoDiaUtilVencimento}
+                        </p>
+                    </div>
+                `;
+            }
+
+            html += `
+                    <div class="flex justify-between">
+                        <span class="font-medium">Dias de Atraso:</span>
+                        <span class="${resultado.diasAtraso > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}">
+                            ${resultado.diasAtraso} dias
+                        </span>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <span class="font-medium">Multa (${resultado.percentualMulta || 2}%):</span>
+                        <span class="${resultado.valorMulta > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}">
+                            ${formatarMoeda(resultado.valorMulta)}
+                        </span>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <span class="font-medium">Juros (${resultado.percentualJuros || 1}% ao ${resultado.periodoJuros === 'mes' ? 'mês' : 'dia'}):</span>
+                        <span class="${resultado.valorJuros > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}">
+                            ${formatarMoeda(resultado.valorJuros)}
+                        </span>
+                    </div>
+                    
+                    <hr class="my-4 border-gray-300" />
+                    
+                    <div class="flex justify-between text-xl font-bold">
+                        <span>Valor Total a Pagar:</span>
+                        <span class="${resultado.valorTotal === resultado.valorBase ? 'text-green-600' : 'text-blue-600'}">
+                            ${formatarMoeda(resultado.valorTotal)}
+                        </span>
+                    </div>
+
+                    <div class="bg-blue-100 p-4 rounded-md mt-4">
+                        <p class="text-sm text-blue-800 font-medium">
+                            ℹ️ ${resultado.observacao}
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            resultadoDiv.innerHTML = html;
+        }
+
+        function limparFormulario() {
+            // Limpar cache para evitar loops
+            cacheFeriados = {};
+            
+            // Esconder loading se estiver visível
+            esconderLoading();
+            
+            // Limpar formulário
+            document.getElementById('valorBase').value = '';
+            document.getElementById('dataVencimento').value = '';
+            document.getElementById('dataPagamento').value = '';
+            document.getElementById('percentualMulta').value = '2';
+            document.getElementById('percentualJuros').value = '1';
+            document.getElementById('periodoJuros').value = 'mes';
+            
+            // Resetar resultado
+            document.getElementById('resultado').innerHTML = `
+                <div class="bg-gray-100 p-8 rounded-lg text-center text-gray-500">
+                    <p class="text-lg">Preencha os campos e clique em "Calcular"</p>
+                    <p class="text-sm mt-2">para ver o resultado detalhado</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
