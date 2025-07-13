@@ -22,7 +22,7 @@
                 Sistema para cálculo de multa e juros em pagamentos em atraso
             </p>
             <p class="text-center text-green-600 text-sm mt-2">
-                Considera feriados nacionais e do Rio de Janeiro
+                Considera feriados nacionais e do Rio de Janeiro • <span class="text-green-500 text-xs opacity-75">By PRWeinstein</span>
             </p>
         </div>
         
@@ -65,6 +65,58 @@
                     />
                 </div>
 
+                <!-- Configurações de Cálculo -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h3 class="text-sm font-semibold text-blue-800 mb-3">⚙️ Configurações de Cálculo</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Multa (%)
+                            </label>
+                            <input
+                                type="number"
+                                id="percentualMulta"
+                                value="2"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                placeholder="Ex: 2"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Juros (%)
+                            </label>
+                            <input
+                                type="number"
+                                id="percentualJuros"
+                                value="1"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                placeholder="Ex: 1"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Período dos Juros
+                            </label>
+                            <select
+                                id="periodoJuros"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="dia">Por dia</option>
+                                <option value="mes" selected>Por mês</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex space-x-4">
                     <button
                         onclick="calcularMultaJuros()"
@@ -97,12 +149,14 @@
             <h3 class="text-lg font-semibold text-green-800 mb-3">📋 Regras de Cálculo</h3>
             <div class="grid md:grid-cols-2 gap-4 text-sm text-green-700">
                 <div>
-                    <p><strong>Multa:</strong> 2% sobre o valor base</p>
-                    <p><strong>Juros:</strong> 1% por dia de atraso</p>
+                    <p><strong>Multa:</strong> Percentual configurável (padrão 2%)</p>
+                    <p><strong>Juros:</strong> Percentual configurável por dia ou mês (padrão 1% ao mês)</p>
+                    <p><strong>Cálculo por mês:</strong> Considera 30 dias por mês</p>
                 </div>
                 <div>
                     <p><strong>Exceção:</strong> Sem multa/juros se pagamento no 1º dia útil após vencimento em feriado/fim de semana</p>
                     <p><strong>Feriados:</strong> Nacionais + Rio de Janeiro</p>
+                    <p><strong>Configurações:</strong> Valores podem ser alterados nos campos acima</p>
                 </div>
             </div>
         </div>
@@ -151,6 +205,15 @@
             return proximaData;
         }
 
+        // Função para ajustar data de pagamento para próximo dia útil se necessário
+        function ajustarDataPagamentoParaDiaUtil(data) {
+            if (ehDiaUtil(data)) {
+                return data; // Se já é dia útil, mantém a data
+            } else {
+                return proximoDiaUtil(data); // Se não é dia útil, move para próximo dia útil
+            }
+        }
+
         function formatarMoeda(valor) {
             return new Intl.NumberFormat('pt-BR', {
                 style: 'currency',
@@ -162,6 +225,9 @@
             const valorBase = document.getElementById('valorBase').value;
             const dataVencimento = document.getElementById('dataVencimento').value;
             const dataPagamento = document.getElementById('dataPagamento').value;
+            const percentualMulta = parseFloat(document.getElementById('percentualMulta').value) || 2;
+            const percentualJuros = parseFloat(document.getElementById('percentualJuros').value) || 1;
+            const periodoJuros = document.getElementById('periodoJuros').value;
 
             if (!valorBase || !dataVencimento || !dataPagamento) {
                 alert('Por favor, preencha todos os campos');
@@ -190,7 +256,10 @@
             const vencimento = new Date(parseInt(anoVenc), parseInt(mesVenc) - 1, parseInt(diaVenc));
             
             const [anoPag, mesPag, diaPag] = dataPagamento.split('-');
-            const pagamento = new Date(parseInt(anoPag), parseInt(mesPag) - 1, parseInt(diaPag));
+            const pagamentoOriginal = new Date(parseInt(anoPag), parseInt(mesPag) - 1, parseInt(diaPag));
+            
+            // REGRA JURÍDICA: Pagamento em dia não útil é considerado efetivo no próximo dia útil
+            const pagamento = ajustarDataPagamentoParaDiaUtil(pagamentoOriginal);
 
             let resultado = {};
 
@@ -207,21 +276,23 @@
                     observacao: 'Pagamento realizado dentro do prazo.'
                 };
             } else {
-                // Verificar regra especial para feriados/fins de semana
+                // REGRA JURÍDICA: Vencimento em dia não útil é prorrogado para próximo dia útil
                 const vencimentoEhDiaUtil = ehDiaUtil(vencimento);
+                let vencimentoEfetivo = vencimentoEhDiaUtil ? vencimento : proximoDiaUtil(vencimento);
                 
                 if (!vencimentoEhDiaUtil) {
                     const proximoDiaUtilVencimento = proximoDiaUtil(vencimento);
                     
                     // Se pagamento foi no primeiro dia útil após vencimento em feriado/fim de semana
-                    if (pagamento.getDate() === proximoDiaUtilVencimento.getDate() &&
-                        pagamento.getMonth() === proximoDiaUtilVencimento.getMonth() &&
-                        pagamento.getFullYear() === proximoDiaUtilVencimento.getFullYear()) {
+                    if (pagamento.getDate() === vencimentoEfetivo.getDate() &&
+                        pagamento.getMonth() === vencimentoEfetivo.getMonth() &&
+                        pagamento.getFullYear() === vencimentoEfetivo.getFullYear()) {
                         
                         resultado = {
                             valorBase: valor,
                             dataVencimento: vencimento.toLocaleDateString('pt-BR'),
-                            dataPagamento: pagamento.toLocaleDateString('pt-BR'),
+                            dataPagamento: pagamentoOriginal.toLocaleDateString('pt-BR'),
+                            dataPagamentoEfetiva: pagamento.toLocaleDateString('pt-BR'),
                             diasAtraso: 0,
                             valorMulta: 0,
                             valorJuros: 0,
@@ -232,42 +303,65 @@
                         };
                     } else {
                         // Para vencimento em feriado/fim de semana, calcular atraso a partir do 1º dia útil
-                        const proximoDiaUtilVencimento = proximoDiaUtil(vencimento);
-                        const diasAtraso = Math.ceil((pagamento - proximoDiaUtilVencimento) / (1000 * 60 * 60 * 24));
-                        const valorMulta = valor * 0.02;
-                        const valorJuros = valor * 0.01 * diasAtraso;
+                        const diasAtraso = Math.ceil((pagamento - vencimentoEfetivo) / (1000 * 60 * 60 * 24));
+                        const valorMulta = valor * (percentualMulta / 100);
+                        
+                        let valorJuros;
+                        if (periodoJuros === 'mes') {
+                            const mesesAtraso = diasAtraso / 30; // Aproximação: 30 dias por mês
+                            valorJuros = valor * (percentualJuros / 100) * mesesAtraso;
+                        } else {
+                            valorJuros = valor * (percentualJuros / 100) * diasAtraso;
+                        }
+                        
                         const valorTotal = valor + valorMulta + valorJuros;
 
                         resultado = {
                             valorBase: valor,
                             dataVencimento: vencimento.toLocaleDateString('pt-BR'),
-                            dataPagamento: pagamento.toLocaleDateString('pt-BR'),
+                            dataPagamento: pagamentoOriginal.toLocaleDateString('pt-BR'),
+                            dataPagamentoEfetiva: pagamento.toLocaleDateString('pt-BR'),
                             diasAtraso,
                             valorMulta,
                             valorJuros,
                             valorTotal,
-                            observacao: `Pagamento com atraso - multa e juros aplicados. Vencimento prorrogado para ${proximoDiaUtilVencimento.toLocaleDateString('pt-BR')} (1º dia útil).`,
+                            observacao: `Pagamento com atraso - multa e juros aplicados. Vencimento prorrogado para ${vencimentoEfetivo.toLocaleDateString('pt-BR')} (1º dia útil).`,
                             vencimentoFoiFeriado: true,
-                            proximoDiaUtilVencimento: proximoDiaUtilVencimento.toLocaleDateString('pt-BR')
+                            proximoDiaUtilVencimento: vencimentoEfetivo.toLocaleDateString('pt-BR'),
+                            percentualMulta,
+                            percentualJuros,
+                            periodoJuros
                         };
                     }
                 } else {
-                    // Cálculo normal com multa e juros
-                    const diasAtraso = Math.ceil((pagamento - vencimento) / (1000 * 60 * 60 * 24));
-                    const valorMulta = valor * 0.02;
-                    const valorJuros = valor * 0.01 * diasAtraso;
+                    // Cálculo normal com multa e juros usando datas efetivas
+                    const diasAtraso = Math.ceil((pagamento - vencimentoEfetivo) / (1000 * 60 * 60 * 24));
+                    const valorMulta = valor * (percentualMulta / 100);
+                    
+                    let valorJuros;
+                    if (periodoJuros === 'mes') {
+                        const mesesAtraso = diasAtraso / 30; // Aproximação: 30 dias por mês
+                        valorJuros = valor * (percentualJuros / 100) * mesesAtraso;
+                    } else {
+                        valorJuros = valor * (percentualJuros / 100) * diasAtraso;
+                    }
+                    
                     const valorTotal = valor + valorMulta + valorJuros;
 
                     resultado = {
                         valorBase: valor,
                         dataVencimento: vencimento.toLocaleDateString('pt-BR'),
-                        dataPagamento: pagamento.toLocaleDateString('pt-BR'),
+                        dataPagamento: pagamentoOriginal.toLocaleDateString('pt-BR'),
+                        dataPagamentoEfetiva: pagamento.toLocaleDateString('pt-BR'),
                         diasAtraso,
                         valorMulta,
                         valorJuros,
                         valorTotal,
                         observacao: 'Pagamento com atraso - multa e juros aplicados.',
-                        vencimentoFoiFeriado: false
+                        vencimentoFoiFeriado: false,
+                        percentualMulta,
+                        percentualJuros,
+                        periodoJuros
                     };
                 }
             }
@@ -294,6 +388,14 @@
                         <span class="font-medium">Data do Pagamento:</span>
                         <span>${resultado.dataPagamento}</span>
                     </div>
+                    
+                    ${resultado.dataPagamentoEfetiva && resultado.dataPagamentoEfetiva !== resultado.dataPagamento ? `
+                    <div class="bg-orange-100 p-3 rounded-md">
+                        <p class="text-sm text-orange-800">
+                            📅 Pagamento efetuado em dia não útil. Data efetiva: ${resultado.dataPagamentoEfetiva}
+                        </p>
+                    </div>
+                    ` : ''}
             `;
 
             if (resultado.vencimentoFoiFeriado && resultado.proximoDiaUtilVencimento) {
@@ -315,14 +417,14 @@
                     </div>
                     
                     <div class="flex justify-between">
-                        <span class="font-medium">Multa (2%):</span>
+                        <span class="font-medium">Multa (${resultado.percentualMulta || 2}%):</span>
                         <span class="${resultado.valorMulta > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}">
                             ${formatarMoeda(resultado.valorMulta)}
                         </span>
                     </div>
                     
                     <div class="flex justify-between">
-                        <span class="font-medium">Juros (1% ao dia):</span>
+                        <span class="font-medium">Juros (${resultado.percentualJuros || 1}% ao ${resultado.periodoJuros === 'mes' ? 'mês' : 'dia'}):</span>
                         <span class="${resultado.valorJuros > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}">
                             ${formatarMoeda(resultado.valorJuros)}
                         </span>
@@ -352,6 +454,9 @@
             document.getElementById('valorBase').value = '';
             document.getElementById('dataVencimento').value = '';
             document.getElementById('dataPagamento').value = '';
+            document.getElementById('percentualMulta').value = '2';
+            document.getElementById('percentualJuros').value = '1';
+            document.getElementById('periodoJuros').value = 'mes';
             document.getElementById('resultado').innerHTML = `
                 <div class="bg-gray-100 p-8 rounded-lg text-center text-gray-500">
                     <p class="text-lg">Preencha os campos e clique em "Calcular"</p>
